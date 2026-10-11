@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "CampusSafe",
+    "slug": "campussafe",
+    "scheme": "campussafe",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.campussafe.app"
+    },
+    "android": {
+      "package": "com.campussafe.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-image-picker",
+      "expo-asset"
+    ]
+  }
+}
