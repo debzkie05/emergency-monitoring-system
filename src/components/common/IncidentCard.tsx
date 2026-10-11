@@ -7,6 +7,7 @@ import { formatDate, formatLocation, getEmergencyColor } from '../../utils/helpe
 import type { Incident } from '../../types';
 
 interface IncidentCardProps {
+  key?: React.Key;
   incident: Incident;
   onPress: () => void;
   showReporter?: boolean;
