@@ -118,14 +118,13 @@ export default function LoginScreen() {
           <View style={styles.form}>
             {/* Email / Student ID */}
             <Input
-              label="School Email / Student ID"
-              placeholder="student@campussafe.edu"
+              label="Student ID or School Email"
+              placeholder="23-A-00296 or student@campussafe.edu"
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
                 clearError();
               }}
-              keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isLoading}

@@ -364,3 +364,10 @@ The system includes preconfigured mock accounts for testing both student and adm
 ## 7. License & Credits
 
 Developed for educational and campus community safety enhancement. Built with [React Native](https://reactnative.dev/), [Expo](https://expo.dev/), and [TypeScript](https://www.typescriptlang.org/).
+## Loading performance
+
+- **Skeleton loading:** `src/components/ui/Skeleton.tsx` and `src/components/common/Skeletons.tsx` show grey placeholder shapes while saved incidents load from the device. `LoadingGate` only shows them if loading lasts longer than 150 ms, so fast loads never flash a skeleton. The pulse stops when the user has "reduce motion" turned on.
+- **Safety rule:** skeletons never replace the red emergency banner or the alert queue. The siren and banner do not wait for loading.
+- **Image loading:** `SmartImage` shows a skeleton until a photo has loaded, and a placeholder icon if it fails.
+- **Lazy loading:** the grouped-reports pop-up, the emergency action pop-up and the dev tools are loaded only when first needed. On web, each route is also split into its own file (`asyncRoutes` in `app.json`).
+- **Preview:** in development, open the admin dashboard, press "Show Controls" in DEV TOOLS, then "Preview loading skeletons" to see the loading look for 2.5 seconds.

@@ -13,6 +13,7 @@ export interface User {
   program?: string;              // course or department
   emergencyContactName?: string;
   emergencyContactPhone?: string;
+  emergencyContactRelationship?: string;
 }
 
 // ─── Emergency Types ───
@@ -74,6 +75,37 @@ export const INCIDENT_STATUS_ORDER: IncidentStatus[] = [
   'resolved',
 ];
 
+// ─── Severity Types ───
+export type Severity = 'Critical' | 'High' | 'Moderate';
+
+export const SEVERITY_LEVELS: Severity[] = ['Critical', 'High', 'Moderate'];
+
+export interface LinkedReport {
+  id: string;
+  reporterId: string;
+  reporterName: string;
+  studentId?: string;
+  timestamp: string;
+  location: CampusLocation;
+  description: string;
+  photo?: string;
+}
+
+export interface EscalationRecord {
+  type: 'unacknowledged' | 'unassigned';
+  timestamp: string;
+  message: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  action: 'acknowledge' | 'assign' | 'resolve' | 'severity_change' | 'merge' | 'split' | 'escalation';
+  adminId: string;
+  adminName: string;
+  timestamp: string;
+  details: string;
+}
+
 // ─── Incident / Report ───
 export interface Incident {
   id: string;
@@ -90,6 +122,12 @@ export interface Incident {
   createdAt: string;
   updatedAt: string;
   statusHistory: StatusUpdate[];
+  severity?: Severity;
+  severityOverridden?: boolean;
+  reports?: LinkedReport[];
+  escalationHistory?: EscalationRecord[];
+  auditTrail?: AuditEntry[];
+  isDemo?: boolean;
 }
 
 export interface StatusUpdate {

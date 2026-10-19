@@ -1,4 +1,5 @@
 import React from 'react';
+import { SmartImage } from '@/components/ui/SmartImage';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -89,7 +90,7 @@ export default function ReportDetailsScreen() {
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Photo</Text>
-                <Image source={{ uri: incident.photo }} style={styles.photo} />
+                <SmartImage uri={incident.photo} style={styles.photo} accessibilityLabel="Photo attached to the report" />
               </View>
             </View>
           )}

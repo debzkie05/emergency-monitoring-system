@@ -20,25 +20,50 @@ export default function EmergencyReviewScreen() {
     router.push({ pathname: `/(user)/emergency/${route}`, params: { id } } as any);
   };
 
+
   const handleSubmit = () => {
-    if (typeof id === 'string') {
+    if (typeof id !== 'string' || !id) {
+      Alert.alert(
+        'Unable to Submit',
+        'The emergency report ID is missing. Please return to the emergency form and try again.',
+      );
+      return;
+    }
+
+    try {
       submitEmergencyDetails(id);
+
       Alert.alert(
         'Report Updated',
-        'Your emergency report has been updated with the details.',
-        [{ text: 'OK', onPress: () => router.replace('/(user)') }]
+        'Your emergency report details have been submitted.',
+        [
+          {
+            text: 'View My Reports',
+            onPress: () => router.replace('/(user)/reports'),
+          },
+          {
+            text: 'Home',
+            onPress: () => router.replace('/(user)'),
+          },
+        ],
+      );
+    } catch (error) {
+      Alert.alert(
+        'Submission Failed',
+        'Unable to update your report. Please try again.',
       );
     }
   };
+
 
   const iconColor = currentEmergency.type ? getEmergencyColor(currentEmergency.type) : colors.primary;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header 
-        title="Review" 
-        subtitle="Please check your information before sending." 
-        showBack 
+      <Header
+        title="Review"
+        subtitle="Please check your information before sending."
+        showBack
       />
 
       <ScrollView
@@ -55,11 +80,11 @@ export default function EmergencyReviewScreen() {
               <Text style={styles.label}>Type</Text>
               <Text style={styles.value}>{currentEmergency.typeLabel || 'Not specified'}</Text>
             </View>
-            <Button 
-              label="Edit" 
-              variant="ghost" 
-              size="sm" 
-              onPress={() => handleEdit('type')} 
+            <Button
+              label="Edit"
+              variant="ghost"
+              size="sm"
+              onPress={() => handleEdit('type')}
               fullWidth={false}
             />
           </View>
@@ -77,11 +102,11 @@ export default function EmergencyReviewScreen() {
                 {currentEmergency.location ? formatLocationFull(currentEmergency.location) : 'Not specified'}
               </Text>
             </View>
-            <Button 
-              label="Edit" 
-              variant="ghost" 
-              size="sm" 
-              onPress={() => handleEdit('location')} 
+            <Button
+              label="Edit"
+              variant="ghost"
+              size="sm"
+              onPress={() => handleEdit('location')}
               fullWidth={false}
             />
           </View>
@@ -99,11 +124,11 @@ export default function EmergencyReviewScreen() {
                 {currentEmergency.description || 'No description provided.'}
               </Text>
             </View>
-            <Button 
-              label="Edit" 
-              variant="ghost" 
-              size="sm" 
-              onPress={() => handleEdit('details')} 
+            <Button
+              label="Edit"
+              variant="ghost"
+              size="sm"
+              onPress={() => handleEdit('details')}
               fullWidth={false}
             />
           </View>
@@ -120,11 +145,11 @@ export default function EmergencyReviewScreen() {
                   <Text style={styles.label}>Photo</Text>
                   <Image source={{ uri: currentEmergency.photo }} style={styles.thumbnail} />
                 </View>
-                <Button 
-                  label="Edit" 
-                  variant="ghost" 
-                  size="sm" 
-                  onPress={() => handleEdit('details')} 
+                <Button
+                  label="Edit"
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => handleEdit('details')}
                   fullWidth={false}
                 />
               </View>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Header } from '@/components/layout/Header';
@@ -7,6 +7,10 @@ import { Button } from '@/components/ui/Button';
 import { colors, spacing, radius, fontSize, fontWeight, shadows } from '@/constants/theme';
 import { useLostFoundStore, LostFoundStatus } from '@/stores/lostFoundStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useUiStore } from '@/stores/uiStore';
+import { SmartImage } from '@/components/ui/SmartImage';
+import { LoadingGate } from '@/components/common/LoadingGate';
+import { LostItemSkeleton } from '@/components/common/Skeletons';
 import { useResponsive } from '@/hooks/useResponsive';
 
 type Filter = 'ALL' | LostFoundStatus;
@@ -27,6 +31,7 @@ export default function LostFoundScreen() {
   const { submitted } = useLocalSearchParams<{ submitted?: string }>();
   const items = useLostFoundStore((s) => s.items);
   const user = useAuthStore((s) => s.user);
+  const loading = useUiStore((s) => s.previewSkeletons);
   const { columns } = useResponsive();
   const [filter, setFilter] = useState<Filter>('ALL');
 
@@ -60,13 +65,17 @@ export default function LostFoundScreen() {
         {visible.length === 0 && <Text style={styles.empty}>No items to show.</Text>}
 
         <View style={styles.grid}>
+        <LoadingGate
+          loading={loading}
+          fallback={<>{[0, 1, 2, 3].map((i) => <LostItemSkeleton key={i} />)}</>}
+        >
         {visible.map((item) => {
           const s = STATUS_STYLE[item.status];
           const mine = !!user && item.reporterId === user.id;
           return (
             <View key={item.id} style={[styles.card, shadows.sm, columns === 2 && styles.cardHalf]}>
               {item.photo ? (
-                <Image source={{ uri: item.photo }} style={styles.thumb} />
+                <SmartImage uri={item.photo} style={styles.thumb} accessibilityLabel={`Photo of ${item.name}`} />
               ) : (
                 <View style={[styles.thumb, styles.thumbEmpty]}>
                   <Ionicons name="cube-outline" size={26} color={colors.textMuted} />
@@ -92,6 +101,7 @@ export default function LostFoundScreen() {
             </View>
           );
         })}
+        </LoadingGate>
         </View>
       </ScrollView>
     </View>

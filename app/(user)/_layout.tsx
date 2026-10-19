@@ -1,11 +1,13 @@
+
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/constants/theme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { ResponsiveFrame } from '@/components/layout/ResponsiveFrame';
+import { useAppTheme } from '@/hooks/useAppTheme';
 
 export default function UserLayout() {
   const { isDesktop } = useResponsive();
+  const { colors } = useAppTheme();
 
   return (
     <ResponsiveFrame>
@@ -14,31 +16,27 @@ export default function UserLayout() {
           headerShown: false,
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textSecondary,
-
           tabBarPosition: isDesktop ? 'left' : 'bottom',
           tabBarVariant: isDesktop ? 'material' : 'uikit',
-
           tabBarStyle: isDesktop
             ? {
-              backgroundColor: colors.surface,
-              borderRightColor: colors.borderLight,
-              borderRightWidth: 1,
-            }
+                backgroundColor: colors.surface,
+                borderRightColor: colors.borderLight,
+                borderRightWidth: 1,
+              }
             : {
-              backgroundColor: colors.surface,
-              borderTopColor: colors.borderLight,
-              borderTopWidth: 1,
-              paddingTop: 4,
-              height: 60,
-            },
-
+                backgroundColor: colors.surface,
+                borderTopColor: colors.borderLight,
+                borderTopWidth: 1,
+                paddingTop: 4,
+                height: 60,
+              },
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: '600',
           },
         }}
       >
-        {/* HOME */}
         <Tabs.Screen
           name="index"
           options={{
@@ -49,18 +47,20 @@ export default function UserLayout() {
           }}
         />
 
-        {/* MY REPORTS */}
         <Tabs.Screen
           name="reports"
           options={{
             title: 'My Reports',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="document-text" size={size} color={color} />
+              <Ionicons
+                name="document-text"
+                size={size}
+                color={color}
+              />
             ),
           }}
         />
 
-        {/* LOST & FOUND */}
         <Tabs.Screen
           name="lost-found"
           options={{
@@ -71,7 +71,6 @@ export default function UserLayout() {
           }}
         />
 
-        {/* PROFILE */}
         <Tabs.Screen
           name="profile"
           options={{
@@ -86,12 +85,9 @@ export default function UserLayout() {
           }}
         />
 
-        {/* EMERGENCY IS NOT A TAB */}
         <Tabs.Screen
           name="emergency"
-          options={{
-            href: null,
-          }}
+          options={{ href: null }}
         />
       </Tabs>
     </ResponsiveFrame>

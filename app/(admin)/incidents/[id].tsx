@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
+import { SmartImage } from '@/components/ui/SmartImage';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Pressable,
-  Image,
   Alert,
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, spacing, fontSize, fontWeight, radius, shadows } from '@/constants/theme';
-import { Header } from '@/components/layout/Header';
+import { AdminShell } from '@/components/layout/AdminShell';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -25,11 +25,13 @@ import {
   formatDateTime,
   getEmergencyColor,
 } from '@/utils/helpers';
+import { getProtocolForEmergency } from '@/utils/protocols';
 import type { IncidentStatus } from '@/types';
 import { INCIDENT_STATUS_LABELS, INCIDENT_STATUS_ORDER } from '@/types';
 
 export default function AdminIncidentDetailScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const incident = useIncidentStore((s) => s.getIncidentById(id || ''));
   const acknowledgeIncident = useIncidentStore((s) => s.acknowledgeIncident);
@@ -41,17 +43,22 @@ export default function AdminIncidentDetailScreen() {
 
   if (!incident) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Header title="Incident Details" showBack />
+      <AdminShell title="Incident Details" active="Incidents">
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
           <Text style={styles.errorText}>Incident not found.</Text>
+          <Button
+            label="Back to Incidents"
+            onPress={() => router.push('/(admin)/incidents')}
+            variant="primary"
+          />
         </View>
-      </View>
+      </AdminShell>
     );
   }
 
   const iconColor = getEmergencyColor(incident.type);
+  const protocol = getProtocolForEmergency(incident.type);
 
   const handleAcknowledge = () => {
     Alert.alert(
@@ -91,13 +98,20 @@ export default function AdminIncidentDetailScreen() {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header title={`Incident ${incident.id}`} showBack />
-
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+    <AdminShell
+      title={`Incident ${incident.id}`}
+      subtitle={`${incident.typeLabel} • Reported ${formatDateTime(incident.createdAt)}`}
+      active="Incidents"
+    >
+      <Pressable
+        onPress={() => router.push('/(admin)/incidents')}
+        style={styles.backButton}
       >
+        <Ionicons name="arrow-back" size={18} color={colors.primary} />
+        <Text style={styles.backButtonText}>Back to Incidents</Text>
+      </Pressable>
+
+      <View style={styles.content}>
         {/* Status Banner */}
         <Card style={[styles.card, styles.statusBanner]}>
           <View style={styles.statusRow}>
@@ -161,7 +175,7 @@ export default function AdminIncidentDetailScreen() {
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Photo</Text>
-                <Image source={{ uri: incident.photo }} style={styles.photo} />
+                <SmartImage uri={incident.photo} style={styles.photo} accessibilityLabel="Photo attached to the report" />
               </View>
             </View>
           )}
@@ -183,6 +197,52 @@ export default function AdminIncidentDetailScreen() {
             </View>
           </Card>
         )}
+
+        {/* Resolution Protocol & Recommended Steps */}
+        <Card style={styles.card}>
+          <View style={styles.protocolHeader}>
+            <View style={{ flex: 1 }}>
+              <View style={styles.protocolTitleRow}>
+                <Ionicons name="clipboard-outline" size={20} color={colors.primary} />
+                <Text style={styles.sectionTitle}>{protocol.title}</Text>
+              </View>
+              <Text style={styles.protocolObjective}>{protocol.objective}</Text>
+            </View>
+            <View style={styles.priorityPill}>
+              <Text style={styles.priorityPillText}>{protocol.priorityLevel}</Text>
+            </View>
+          </View>
+          <View style={styles.divider} />
+
+          <Text style={styles.checklistPrompt}>
+            Required steps for administrator to resolve this issue:
+          </Text>
+
+          <View style={styles.stepList}>
+            {protocol.steps.map((step, idx) => (
+              <View key={step.id} style={styles.stepRow}>
+                <View style={styles.stepIndexCircle}>
+                  <Text style={styles.stepIndexText}>{idx + 1}</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <View style={styles.stepTitleRow}>
+                    <Text style={styles.stepTitle}>{step.title}</Text>
+                    {step.isUrgent && (
+                      <View style={styles.urgentPill}>
+                        <Text style={styles.urgentPillText}>URGENT</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.stepDesc}>{step.description}</Text>
+                  <View style={styles.deptBadge}>
+                    <Ionicons name="navigate-outline" size={12} color={colors.textSecondary} />
+                    <Text style={styles.deptBadgeText}>{step.recommendedDepartment}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        </Card>
 
         {/* Status Timeline */}
         <Card style={styles.card}>
@@ -226,7 +286,7 @@ export default function AdminIncidentDetailScreen() {
             </View>
           </View>
         )}
-      </ScrollView>
+      </View>
 
       {/* ── Assign Responder Modal ── */}
       <Modal
@@ -337,7 +397,7 @@ export default function AdminIncidentDetailScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </AdminShell>
   );
 }
 
@@ -346,10 +406,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  backButtonText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
   content: {
-    padding: spacing.xl,
     gap: spacing.xl,
     paddingBottom: spacing.xxxl,
+    maxWidth: 960,
   },
   errorContainer: {
     flex: 1,
@@ -564,5 +642,112 @@ const styles = StyleSheet.create({
   cancelOption: {
     marginTop: spacing.lg,
     borderBottomWidth: 0,
+  },
+
+  /* ── Protocol & Resolution Steps ── */
+  protocolHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  protocolTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  protocolObjective: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  priorityPill: {
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+  },
+  priorityPillText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
+  checklistPrompt: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  stepList: {
+    gap: spacing.sm,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  stepIndexCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  stepIndexText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+  },
+  stepContent: {
+    flex: 1,
+  },
+  stepTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: 2,
+  },
+  stepTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  urgentPill: {
+    backgroundColor: colors.dangerLight,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  urgentPillText: {
+    fontSize: 9,
+    fontWeight: fontWeight.bold,
+    color: colors.danger,
+  },
+  stepDesc: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    lineHeight: 17,
+  },
+  deptBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.xs,
+  },
+  deptBadgeText: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
   },
 });

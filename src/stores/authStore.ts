@@ -1,48 +1,152 @@
+
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import type { User } from '../types';
 import { MOCK_USERS, MOCK_CREDENTIALS } from '../data/users';
 
+const SESSION_DURATION_MS = 90 * 24 * 60 * 60 * 1000;
+const AUTH_STORAGE_KEY = 'campussafe-auth-session';
+
+type EditableProfile = Partial<
+  Pick<
+    User,
+    | 'name'
+    | 'email'
+    | 'avatar'
+    | 'emergencyContactName'
+    | 'emergencyContactPhone'
+    | 'emergencyContactRelationship'
+  >
+>;
+
 interface AuthState {
   user: User | null;
+  sessionExpiresAt: number | null;
   isLoading: boolean;
   error: string | null;
+  hasHydrated: boolean;
 
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (identifier: string, password: string) => Promise<void>;
   signOut: () => void;
   clearError: () => void;
+  setHasHydrated: (value: boolean) => void;
+  updateProfile: (updates: EditableProfile) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isLoading: false,
-  error: null,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      sessionExpiresAt: null,
+      isLoading: false,
+      error: null,
+      hasHydrated: false,
 
-  signIn: async (email: string, password: string) => {
-    set({ isLoading: true, error: null });
+      signIn: async (identifier: string, password: string) => {
+        set({ isLoading: true, error: null });
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
+        try {
+          const normalizedIdentifier = identifier.trim().toLowerCase();
+          const credentials = MOCK_CREDENTIALS[normalizedIdentifier];
 
-    const credentials = MOCK_CREDENTIALS[email.toLowerCase().trim()];
-    if (!credentials || credentials.password !== password) {
-      set({ isLoading: false, error: 'Invalid email or password. Please try again.' });
-      return;
-    }
+          if (!credentials || credentials.password !== password) {
+            set({
+              isLoading: false,
+              error: 'Invalid student ID, email, or password.',
+            });
+            return;
+          }
 
-    const user = MOCK_USERS.find((u) => u.id === credentials.userId);
-    if (!user) {
-      set({ isLoading: false, error: 'User not found.' });
-      return;
-    }
+          const user = MOCK_USERS.find(
+            (item) => item.id === credentials.userId,
+          );
 
-    set({ user, isLoading: false, error: null });
-  },
+          if (!user) {
+            set({
+              isLoading: false,
+              error:
+                'Account not found. Please contact the administrator.',
+            });
+            return;
+          }
 
-  signOut: () => {
-    set({ user: null, error: null });
-  },
+          set({
+            user: { ...user },
+            sessionExpiresAt: Date.now() + SESSION_DURATION_MS,
+            isLoading: false,
+            error: null,
+          });
+        } catch {
+          set({
+            isLoading: false,
+            error: 'Unable to sign in. Please try again.',
+          });
+        }
+      },
 
-  clearError: () => {
-    set({ error: null });
-  },
-}));
+      signOut: () => {
+        set({
+          user: null,
+          sessionExpiresAt: null,
+          isLoading: false,
+          error: null,
+        });
+      },
+
+      clearError: () => {
+        set({ error: null });
+      },
+
+      setHasHydrated: (value: boolean) => {
+        set({ hasHydrated: value });
+      },
+
+      updateProfile: (updates) => {
+        const currentUser = get().user;
+
+        if (!currentUser) {
+          return;
+        }
+
+        set({
+          user: {
+            ...currentUser,
+            ...updates,
+
+            // Keep registered account identity fields unchanged.
+            id: currentUser.id,
+            studentId: currentUser.studentId,
+            role: currentUser.role,
+          },
+        });
+      },
+    }),
+    {
+      name: AUTH_STORAGE_KEY,
+      storage: createJSONStorage(() => AsyncStorage),
+
+      partialize: (state) => ({
+        user: state.user,
+        sessionExpiresAt: state.sessionExpiresAt,
+      }),
+
+      onRehydrateStorage: () => (state) => {
+        if (!state) {
+          return;
+        }
+
+        const expired =
+          !state.sessionExpiresAt ||
+          Date.now() >= state.sessionExpiresAt;
+
+        if (state.user && expired) {
+          state.signOut();
+        }
+
+        state.setHasHydrated(true);
+      },
+    },
+  ),
+);

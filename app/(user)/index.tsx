@@ -9,12 +9,17 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { IncidentCard } from '@/components/common/IncidentCard';
 import { useAuthStore } from '@/stores/authStore';
 import { useIncidentStore } from '@/stores/incidentStore';
+import { useIncidentsLoading } from '@/hooks/useIncidentsLoading';
+import { LoadingGate } from '@/components/common/LoadingGate';
+import { IncidentCardSkeleton } from '@/components/common/Skeletons';
 import { formatDate, formatLocation } from '@/utils/helpers';
+import { useAppTheme } from '@/hooks/useAppTheme';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const loading = useIncidentsLoading();
   const signOut = useAuthStore((s) => s.signOut);
   const { incidents, createEmergencyAlert, resetCurrentEmergency } = useIncidentStore();
 
@@ -161,7 +166,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Recent Reports */}
-        {userReports.length > 0 && (
+        {(loading || userReports.length > 0) && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent Reports</Text>
@@ -169,6 +174,10 @@ export default function HomeScreen() {
                 <Text style={styles.viewAll}>View All</Text>
               </Pressable>
             </View>
+            <LoadingGate
+              loading={loading}
+              fallback={<><IncidentCardSkeleton /><IncidentCardSkeleton /></>}
+            >
             {userReports.map((incident) => (
               <IncidentCard
                 key={incident.id}
@@ -176,6 +185,7 @@ export default function HomeScreen() {
                 onPress={() => router.push({ pathname: '/(user)/reports/[id]', params: { id: incident.id } })}
               />
             ))}
+            </LoadingGate>
           </View>
         )}
 

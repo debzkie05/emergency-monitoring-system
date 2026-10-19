@@ -20,6 +20,9 @@ import {
     fontWeight,
     radius,
 } from '@/constants/theme';
+import { useIncidentStore } from '@/stores/incidentStore';
+import { audioController, type AudioState } from '@/utils/audioController';
+import { getIncidentSeverity } from '@/utils/severity';
 
 interface AdminShellProps {
     children: React.ReactNode;
@@ -72,6 +75,28 @@ export function AdminShell({
 
     const isDesktop = width >= 900;
 
+    const incidents = useIncidentStore((s) => s.incidents);
+    const audioState = useIncidentStore((s) => s.audioState);
+    const setAudioState = useIncidentStore((s) => s.setAudioState);
+
+    const criticalWaitingCount = incidents.filter(
+        (i) => getIncidentSeverity(i) === 'Critical' && i.status === 'reported'
+    ).length;
+
+    React.useEffect(() => {
+        const unsub = audioController.subscribe((st) => {
+            setAudioState(st);
+        });
+        return () => {
+            unsub();
+        };
+    }, [setAudioState]);
+
+    const handleToggleMonitoring = async () => {
+        const nextState = await audioController.startMonitoring();
+        setAudioState(nextState);
+    };
+
     if (!isDesktop) {
         return (
             <View style={styles.mobileContainer}>
@@ -96,11 +121,14 @@ export function AdminShell({
                         </View>
                     </View>
 
-                    <Pressable style={styles.mobileProfile}>
+                    <Pressable
+                        style={styles.mobileProfile}
+                        onPress={handleToggleMonitoring}
+                    >
                         <Ionicons
-                            name="person-circle-outline"
-                            size={34}
-                            color={colors.text}
+                            name={audioState === 'active' ? 'volume-high' : 'volume-mute-outline'}
+                            size={24}
+                            color={audioState === 'active' ? colors.success : colors.textSecondary}
                         />
                     </Pressable>
                 </View>
@@ -137,15 +165,24 @@ export function AdminShell({
                                 }
                                 style={styles.mobileNavItem}
                             >
-                                <Ionicons
-                                    name={item.icon as any}
-                                    size={21}
-                                    color={
-                                        selected
-                                            ? colors.primary
-                                            : colors.textMuted
-                                    }
-                                />
+                                <View style={{ position: 'relative' }}>
+                                    <Ionicons
+                                        name={item.icon as any}
+                                        size={21}
+                                        color={
+                                            selected
+                                                ? colors.primary
+                                                : colors.textMuted
+                                        }
+                                    />
+                                    {item.label === 'Incidents' && criticalWaitingCount > 0 && (
+                                        <View style={styles.mobileBadge}>
+                                            <Text style={styles.mobileBadgeText}>
+                                                {criticalWaitingCount}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
 
                                 <Text
                                     style={[
@@ -222,15 +259,24 @@ export function AdminShell({
                                     }
                                 />
 
-                                <Text
-                                    style={[
-                                        styles.navText,
-                                        selected &&
-                                        styles.navTextActive,
-                                    ]}
-                                >
-                                    {item.label}
-                                </Text>
+                                <View style={styles.navLabelRow}>
+                                    <Text
+                                        style={[
+                                            styles.navText,
+                                            selected &&
+                                            styles.navTextActive,
+                                        ]}
+                                    >
+                                        {item.label}
+                                    </Text>
+                                    {item.label === 'Incidents' && criticalWaitingCount > 0 && (
+                                        <View style={styles.sidebarBadge}>
+                                            <Text style={styles.sidebarBadgeText}>
+                                                {criticalWaitingCount}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
                             </Pressable>
                         );
                     })}
@@ -290,14 +336,71 @@ export function AdminShell({
                     </View>
 
                     <View style={styles.topbarRight}>
-                        <Pressable style={styles.iconButton}>
+                        {audioState === 'active' && (
+                            <View style={styles.audioStatusPillActive}>
+                                <View style={styles.audioDotActive} />
+                                <Text style={styles.audioStatusTextActive}>
+                                    Audio monitoring active
+                                </Text>
+                            </View>
+                        )}
+                        {audioState === 'not_started' && (
+                            <Pressable
+                                onPress={handleToggleMonitoring}
+                                style={styles.audioStatusPillStart}
+                            >
+                                <Ionicons
+                                    name="volume-high-outline"
+                                    size={15}
+                                    color={colors.primary}
+                                />
+                                <Text style={styles.audioStatusTextStart}>
+                                    Start monitoring
+                                </Text>
+                            </Pressable>
+                        )}
+                        {audioState === 'blocked' && (
+                            <Pressable
+                                onPress={handleToggleMonitoring}
+                                style={styles.audioStatusPillBlocked}
+                            >
+                                <Ionicons
+                                    name="alert-circle"
+                                    size={15}
+                                    color={colors.warning}
+                                />
+                                <Text style={styles.audioStatusTextBlocked}>
+                                    Audio blocked (tap to allow)
+                                </Text>
+                            </Pressable>
+                        )}
+                        {audioState === 'unavailable' && (
+                            <View style={styles.audioStatusPillUnavailable}>
+                                <Text style={styles.audioStatusTextUnavailable}>
+                                    Audio on web admin
+                                </Text>
+                            </View>
+                        )}
+
+                        <Pressable
+                            style={styles.iconButton}
+                            onPress={() => router.push('/(admin)/incidents')}
+                        >
                             <Ionicons
                                 name="notifications-outline"
                                 size={21}
                                 color={colors.text}
                             />
 
-                            <View style={styles.notificationDot} />
+                            {criticalWaitingCount > 0 ? (
+                                <View style={styles.notificationBadge}>
+                                    <Text style={styles.notificationBadgeText}>
+                                        {criticalWaitingCount}
+                                    </Text>
+                                </View>
+                            ) : (
+                                <View style={styles.notificationDot} />
+                            )}
                         </Pressable>
 
                         <View style={styles.topbarDivider} />
@@ -634,5 +737,140 @@ const styles = StyleSheet.create({
     mobileNavTextActive: {
         color: colors.primary,
         fontWeight: fontWeight.bold,
+    },
+
+    navLabelRow: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+
+    sidebarBadge: {
+        backgroundColor: colors.danger,
+        borderRadius: radius.full,
+        minWidth: 20,
+        height: 20,
+        paddingHorizontal: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    sidebarBadgeText: {
+        color: colors.textWhite,
+        fontSize: 11,
+        fontWeight: fontWeight.bold,
+    },
+
+    mobileBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -10,
+        backgroundColor: colors.danger,
+        borderRadius: radius.full,
+        minWidth: 16,
+        height: 16,
+        paddingHorizontal: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    mobileBadgeText: {
+        color: colors.textWhite,
+        fontSize: 9,
+        fontWeight: fontWeight.bold,
+    },
+
+    notificationBadge: {
+        position: 'absolute',
+        top: 2,
+        right: 2,
+        backgroundColor: colors.danger,
+        borderRadius: radius.full,
+        minWidth: 16,
+        height: 16,
+        paddingHorizontal: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    notificationBadgeText: {
+        color: colors.textWhite,
+        fontSize: 9,
+        fontWeight: fontWeight.extrabold,
+    },
+
+    audioStatusPillActive: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+    },
+
+    audioDotActive: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: colors.success,
+    },
+
+    audioStatusTextActive: {
+        color: '#065F46',
+        fontSize: 12,
+        fontWeight: fontWeight.semibold,
+    },
+
+    audioStatusPillStart: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: colors.primaryLight,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: colors.primaryMuted,
+    },
+
+    audioStatusTextStart: {
+        color: colors.primary,
+        fontSize: 12,
+        fontWeight: fontWeight.bold,
+    },
+
+    audioStatusPillBlocked: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: colors.warningLight,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: colors.warning,
+    },
+
+    audioStatusTextBlocked: {
+        color: colors.warningDark,
+        fontSize: 12,
+        fontWeight: fontWeight.bold,
+    },
+
+    audioStatusPillUnavailable: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: radius.full,
+        backgroundColor: colors.surfaceAlt,
+    },
+
+    audioStatusTextUnavailable: {
+        color: colors.textSecondary,
+        fontSize: 12,
+        fontWeight: fontWeight.medium,
     },
 });
